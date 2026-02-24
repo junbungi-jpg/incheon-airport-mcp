@@ -58,7 +58,7 @@ function handleMCP(method, params) {
     return {
       tools: [
         {
-          name: "show_transport_map",
+          name: "get_transport_by_location",
           description: "출발 지역을 입력하면 인천공항까지 가는 교통편을 지도 UI로 보여줍니다.",
           inputSchema: {
             type: "object",
@@ -103,7 +103,7 @@ function handleMCP(method, params) {
     const widgetUrl = getWidgetUrl();
 
     // 1. 지도로 교통편 보여주기
-    if (name === "show_transport_map") {
+    if (name === "get_transport_by_location") {
       const loc = args.location || "";
       const busMatch = Object.entries(transportData.buses).find(
         ([key]) => loc.includes(key) || key.includes(loc.replace(/역|시|구/, ""))
