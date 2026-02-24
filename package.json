@@ -1,7 +1,7 @@
 {
-  "name": "incheon-airport-mcp-v3",
-  "version": "3.0.0",
-  "description": "인천공항 교통 안내 MCP 서버 (지도 위젯)",
+  "name": "incheon-airport-mcp-v4",
+  "version": "4.0.0",
+  "description": "인천공항 교통 안내 MCP 서버 (네이버 지도 연동)",
   "main": "index.js",
   "type": "module",
   "scripts": {
