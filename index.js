@@ -173,8 +173,19 @@ function createMcpServer() {
       "openai/toolInvocation/invoked": "교통편 안내 완료",
     },
   }, async ({ location }) => {
+    console.log(`[Tool] get_transport_by_location 호출: "${location}"`);
+    console.log(`[Tool] NAVER_CLIENT_ID: ${NAVER_CLIENT_ID ? NAVER_CLIENT_ID.slice(0,4)+"****" : "❌ 없음"}`);
+    console.log(`[Tool] NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET ? "****"+NAVER_CLIENT_SECRET.slice(-4) : "❌ 없음"}`);
+
     // 1. 출발지 좌표 조회
-    const geo = await geocode(location);
+    let geo = null;
+    try {
+      geo = await geocode(location);
+    } catch(e) {
+      console.error(`[Tool] geocode 예외:`, e.message, e.cause?.message);
+    }
+    console.log(`[Tool] geocode 결과:`, geo ? `lat:${geo.lat} lng:${geo.lng}` : "null");
+
     if (!geo) {
       return {
         content: [{ type: "text", text: `❌ "${location}" 위치를 찾을 수 없어요. 더 자세한 주소로 다시 시도해보세요.` }],
