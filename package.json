@@ -1,12 +1,11 @@
 {
-  "name": "incheon-airport-mcp",
-  "version": "1.0.0",
-  "description": "인천공항 교통 안내 MCP 서버",
+  "name": "incheon-airport-mcp-v2",
+  "version": "2.0.0",
+  "description": "인천공항 교통 안내 MCP 서버 (지도 UI 포함)",
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2"
