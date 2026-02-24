@@ -3,175 +3,265 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>인천공항 교통 지도</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <title>인천공항 교통 안내</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, sans-serif; background: #0f1117; color: #fff; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-
-    #header { padding: 12px 16px; background: #0f1117; border-bottom: 1px solid #1e2030; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-    #header h1 { font-size: 14px; font-weight: 700; }
-    #header p { font-size: 11px; color: #6b7280; }
-
-    #filters { display: flex; gap: 6px; padding: 8px 16px; overflow-x: auto; flex-shrink: 0; scrollbar-width: none; }
-    #filters::-webkit-scrollbar { display: none; }
-    .filter-btn { padding: 4px 12px; border-radius: 20px; border: 1px solid #2d3148; background: transparent; color: #9ca3af; font-size: 11px; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
-    .filter-btn.active { background: #3b82f6; border-color: #3b82f6; color: #fff; font-weight: 600; }
-
-    #map { flex: 1; }
-
-    #card-container { position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; padding: 0 12px 12px; }
-    #cards { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
-    #cards::-webkit-scrollbar { display: none; }
-
-    .card { flex-shrink: 0; width: 200px; background: rgba(15,17,23,0.96); backdrop-filter: blur(12px); border: 1px solid #2d3148; border-radius: 12px; padding: 12px; cursor: pointer; transition: all 0.2s; }
-    .card:hover, .card.active { border-color: #3b82f6; transform: translateY(-2px); }
-    .card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-    .card-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
-    .card-name { font-size: 12px; font-weight: 700; }
-    .card-loc { font-size: 10px; color: #6b7280; }
-    .card-stats { display: flex; gap: 6px; }
-    .stat { flex: 1; background: #1a1d2e; border-radius: 6px; padding: 5px; text-align: center; }
-    .stat-v { font-size: 11px; font-weight: 700; }
-    .stat-l { font-size: 9px; color: #6b7280; margin-top: 1px; }
-
-    .leaflet-popup-content-wrapper { background: #1a1d2e; border: 1px solid #2d3148; border-radius: 10px; color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-    .leaflet-popup-tip { background: #1a1d2e; }
-    .leaflet-popup-content { margin: 10px 12px; }
-    .popup-title { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
-    .popup-row { display: flex; gap: 4px; margin-top: 4px; }
-    .badge { font-size: 10px; padding: 2px 6px; border-radius: 8px; font-weight: 600; }
-    .b-blue { background: rgba(59,130,246,0.2); color: #60a5fa; }
-    .b-green { background: rgba(34,197,94,0.2); color: #4ade80; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:-apple-system,sans-serif; background:#0f1117; color:#fff; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+    #hd { padding:12px 16px; background:#0f1117; border-bottom:1px solid #1e2030; display:flex; align-items:center; gap:10px; flex-shrink:0; }
+    #hd h1 { font-size:14px; font-weight:700; }
+    #hd p { font-size:11px; color:#6b7280; margin-top:1px; }
+    #filters { display:flex; gap:6px; padding:8px 16px; overflow-x:auto; flex-shrink:0; scrollbar-width:none; }
+    #filters::-webkit-scrollbar { display:none; }
+    .fb { padding:4px 12px; border-radius:20px; border:1px solid #2d3148; background:transparent; color:#9ca3af; font-size:11px; cursor:pointer; white-space:nowrap; transition:all .2s; }
+    .fb.on { background:#3b82f6; border-color:#3b82f6; color:#fff; font-weight:600; }
+    #mw { flex:1; position:relative; overflow:hidden; }
+    canvas { width:100%; height:100%; display:block; cursor:grab; }
+    canvas:active { cursor:grabbing; }
+    #zb { position:absolute; top:10px; right:10px; z-index:10; display:flex; flex-direction:column; gap:4px; }
+    .zbt { width:28px; height:28px; background:rgba(15,17,23,.9); border:1px solid #2d3148; border-radius:6px; color:#fff; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .zbt:hover { background:#1a1d2e; }
+    #cw { position:absolute; bottom:0; left:0; right:0; z-index:10; padding:0 12px 12px; }
+    #cards { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; }
+    #cards::-webkit-scrollbar { display:none; }
+    .card { flex-shrink:0; width:190px; background:rgba(15,17,23,.96); backdrop-filter:blur(12px); border:1px solid #2d3148; border-radius:12px; padding:11px; cursor:pointer; transition:all .2s; }
+    .card:hover,.card.on { border-color:#3b82f6; transform:translateY(-2px); }
+    .ct { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+    .ci { width:28px; height:28px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+    .cn { font-size:12px; font-weight:700; }
+    .cl { font-size:10px; color:#6b7280; }
+    .cs { display:flex; gap:5px; }
+    .st { flex:1; background:#1a1d2e; border-radius:6px; padding:5px; text-align:center; }
+    .sv { font-size:10px; font-weight:700; }
+    .sl { font-size:9px; color:#6b7280; margin-top:1px; }
+    #tip { position:absolute; z-index:20; background:rgba(15,17,23,.97); border:1px solid #2d3148; border-radius:10px; padding:10px 12px; pointer-events:none; display:none; min-width:150px; }
+    .tn { font-size:12px; font-weight:700; margin-bottom:4px; }
+    .tb { display:flex; gap:4px; margin-top:4px; }
+    .bx { font-size:10px; padding:2px 6px; border-radius:6px; font-weight:600; }
+    .b1 { background:rgba(59,130,246,.2); color:#60a5fa; }
+    .b2 { background:rgba(34,197,94,.2); color:#4ade80; }
   </style>
 </head>
 <body>
 
-<div id="header">
+<div id="hd">
   <span style="font-size:18px">✈️</span>
-  <div>
-    <h1 id="title">인천공항 교통 안내</h1>
-    <p id="subtitle">출발지 주변 교통편을 확인하세요</p>
-  </div>
+  <div><h1 id="ht">인천공항 교통 안내</h1><p id="hs">출발지 주변 교통편을 확인하세요</p></div>
 </div>
 
 <div id="filters">
-  <button class="filter-btn active" onclick="setFilter('all',this)">전체</button>
-  <button class="filter-btn" onclick="setFilter('rail',this)">🚇 철도</button>
-  <button class="filter-btn" onclick="setFilter('bus',this)">🚌 버스</button>
-  <button class="filter-btn" onclick="setFilter('taxi',this)">🚕 택시</button>
+  <button class="fb on" onclick="setF('all',this)">전체</button>
+  <button class="fb" onclick="setF('rail',this)">🚇 철도</button>
+  <button class="fb" onclick="setF('bus',this)">🚌 버스</button>
+  <button class="fb" onclick="setF('taxi',this)">🚕 택시</button>
 </div>
 
-<div id="map"></div>
-
-<div id="card-container">
-  <div id="cards"></div>
+<div id="mw">
+  <canvas id="c"></canvas>
+  <div id="zb">
+    <button class="zbt" onclick="doZoom(1.3)">+</button>
+    <button class="zbt" onclick="doZoom(0.77)">−</button>
+  </div>
+  <div id="tip">
+    <div class="tn" id="tn"></div>
+    <div style="font-size:10px;color:#6b7280;margin-bottom:2px" id="tl"></div>
+    <div class="tb"><span class="bx b1" id="tt"></span><span class="bx b2" id="tp"></span></div>
+  </div>
+  <div id="cw"><div id="cards"></div></div>
 </div>
 
 <script>
-const POINTS = [
-  { id:"arex1", type:"rail", name:"공항철도 직통", icon:"🚇", color:"#3b82f6", lat:37.5546, lng:126.9706, loc:"서울역", time:"43분", price:"11,000원", gap:"30분" },
-  { id:"arex2", type:"rail", name:"공항철도 일반", icon:"🚇", color:"#60a5fa", lat:37.5546, lng:126.9710, loc:"서울역", time:"66분", price:"4,150원", gap:"6~12분" },
-  { id:"bus1",  type:"bus",  name:"리무진 6103", icon:"🚌", color:"#22c55e", lat:37.4979, lng:127.0276, loc:"강남역", time:"80~110분", price:"17,000원", gap:"15~20분" },
-  { id:"bus2",  type:"bus",  name:"리무진 6001", icon:"🚌", color:"#22c55e", lat:37.5133, lng:127.1000, loc:"잠실역", time:"70~100분", price:"17,000원", gap:"20~30분" },
-  { id:"bus3",  type:"bus",  name:"리무진 6020", icon:"🚌", color:"#4ade80", lat:37.5636, lng:126.9869, loc:"명동", time:"60~90분", price:"15,000원", gap:"15~20분" },
-  { id:"bus4",  type:"bus",  name:"리무진 6030", icon:"🚌", color:"#4ade80", lat:37.5552, lng:126.9368, loc:"신촌·홍대", time:"50~80분", price:"15,000원", gap:"20분" },
-  { id:"taxi1", type:"taxi", name:"택시", icon:"🚕", color:"#f59e0b", lat:37.5665, lng:126.9780, loc:"서울 시내", time:"50~90분", price:"60,000~90,000원", gap:"24시간" },
+const PTS = [
+  {id:"arex1",type:"rail",  name:"공항철도 직통",icon:"🚇",color:"#3b82f6",lat:37.5546,lng:126.9706,loc:"서울역",    time:"43분",      price:"11,000원",       gap:"30분"},
+  {id:"arex2",type:"rail",  name:"공항철도 일반",icon:"🚇",color:"#60a5fa",lat:37.5550,lng:126.9712,loc:"서울역",    time:"66분",      price:"4,150원",        gap:"6~12분"},
+  {id:"bus1", type:"bus",   name:"리무진 6103", icon:"🚌",color:"#22c55e",lat:37.4979,lng:127.0276,loc:"강남역",    time:"80~110분",  price:"17,000원",       gap:"15~20분"},
+  {id:"bus2", type:"bus",   name:"리무진 6001", icon:"🚌",color:"#4ade80",lat:37.5133,lng:127.1000,loc:"잠실역",    time:"70~100분",  price:"17,000원",       gap:"20~30분"},
+  {id:"bus3", type:"bus",   name:"리무진 6020", icon:"🚌",color:"#86efac",lat:37.5636,lng:126.9869,loc:"명동",      time:"60~90분",   price:"15,000원",       gap:"15~20분"},
+  {id:"bus4", type:"bus",   name:"리무진 6030", icon:"🚌",color:"#bbf7d0",lat:37.5552,lng:126.9368,loc:"신촌·홍대", time:"50~80분",   price:"15,000원",       gap:"20분"},
+  {id:"taxi1",type:"taxi",  name:"택시",        icon:"🚕",color:"#f59e0b",lat:37.5665,lng:126.9780,loc:"서울 시내", time:"50~90분",   price:"60,000~90,000원",gap:"24시간"},
+  {id:"apt",  type:"airport",name:"인천국제공항",icon:"✈️",color:"#ef4444",lat:37.4602,lng:126.4407,loc:"인천 중구", time:"-",         price:"-",              gap:"-"},
 ];
 
-let map, markers = [], currentFilter = "all";
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+let W,H,scale=1,ox=0,oy=0,dragging=false,dx=0,dy=0,hov=null,filt='all';
+const CLat=37.52, CLng=126.75;
 
-function initMap() {
-  map = L.map('map', { center:[37.52,126.75], zoom:11, zoomControl:false });
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution:'©CartoDB', subdomains:'abcd', maxZoom:19 }).addTo(map);
-  L.control.zoom({ position:'topright' }).addTo(map);
+function ll(lat,lng){
+  const s=W*scale/1.8;
+  return {x:(lng-CLng)*s+W/2+ox, y:-(lat-CLat)*s*1.2+H/2+oy};
+}
 
-  // 공항 마커
-  L.marker([37.4602, 126.4407], { icon: L.divIcon({
-    html:`<div style="background:#ef4444;border:3px solid #fff;border-radius:50%;width:18px;height:18px;box-shadow:0 2px 10px rgba(239,68,68,0.8);display:flex;align-items:center;justify-content:center;font-size:9px;">✈</div>`,
-    className:'', iconSize:[18,18], iconAnchor:[9,9]
-  })}).addTo(map).bindPopup('<div class="popup-title">✈️ 인천국제공항</div><div class="popup-row"><span class="badge b-blue">제1터미널</span><span class="badge b-green">제2터미널</span></div>');
+function drawBg(){
+  ctx.fillStyle='#141720'; ctx.fillRect(0,0,W,H);
+  // 격자
+  ctx.strokeStyle='#1e2233'; ctx.lineWidth=0.5;
+  const st=50*scale;
+  const sx=((ox%st)+st)%st, sy=((oy%st)+st)%st;
+  ctx.beginPath();
+  for(let x=sx;x<W;x+=st){ctx.moveTo(x,0);ctx.lineTo(x,H);}
+  for(let y=sy;y<H;y+=st){ctx.moveTo(0,y);ctx.lineTo(W,y);}
+  ctx.stroke();
+  // 한강
+  const hr=[[37.52,126.78],[37.53,126.85],[37.525,126.90],[37.52,126.94],[37.515,127.00],[37.52,127.08]];
+  ctx.strokeStyle='#1a2744'; ctx.lineWidth=10*scale; ctx.lineCap='round';
+  ctx.beginPath();
+  hr.forEach(([a,b],i)=>{const p=ll(a,b);i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);});
+  ctx.stroke();
+  // 도로망
+  const roads=[
+    [[37.32,127.05],[37.40,127.02],[37.48,127.00],[37.56,126.98]],
+    [[37.51,126.88],[37.51,127.08]],
+    [[37.54,126.88],[37.54,127.08]],
+    [[37.46,126.44],[37.48,126.60],[37.50,126.76],[37.52,126.88]],
+  ];
+  ctx.strokeStyle='#252a3d'; ctx.lineWidth=2*scale;
+  roads.forEach(r=>{
+    ctx.beginPath();
+    r.forEach(([a,b],i)=>{const p=ll(a,b);i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);});
+    ctx.stroke();
+  });
+}
 
-  render();
-
-  // Apps SDK 연동
-  try {
-    if (window.openai) {
-      applyData(window.openai.toolOutput);
-      window.openai.onToolOutput = applyData;
+function drawMarkers(){
+  const vis=filt==='all'?PTS:PTS.filter(p=>p.type===filt||p.type==='airport');
+  vis.forEach(p=>{
+    const {x,y}=ll(p.lat,p.lng);
+    if(x<-20||x>W+20||y<-20||y>H+20)return;
+    const r=p.type==='airport'?10:7;
+    const isH=hov===p.id;
+    // 글로우
+    if(isH||p.type==='airport'){
+      const g=ctx.createRadialGradient(x,y,r,x,y,r+8);
+      g.addColorStop(0,p.color+'55');g.addColorStop(1,'transparent');
+      ctx.beginPath();ctx.arc(x,y,r+8,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
     }
-    // MCP Apps bridge
-    window.addEventListener("message", (e) => {
-      if (e.data?.method === "ui/notifications/tool-result") {
-        applyData(e.data?.params?.structuredContent);
-      }
-    });
-  } catch(e) {}
-}
-
-function applyData(data) {
-  if (!data) return;
-  if (data.title) document.getElementById('title').textContent = data.title;
-  if (data.subtitle) document.getElementById('subtitle').textContent = data.subtitle;
-  if (data.focus) map.flyTo([data.focus.lat, data.focus.lng], 13, { duration:0.8 });
-  if (data.highlight) highlightCard(data.highlight);
-}
-
-function mkIcon(color) {
-  return L.divIcon({
-    html:`<div style="background:${color};border:2px solid #fff;border-radius:50%;width:12px;height:12px;box-shadow:0 2px 6px ${color}99;"></div>`,
-    className:'', iconSize:[12,12], iconAnchor:[6,6]
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle=p.color;ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=isH?2.5:1.5;ctx.stroke();
+    if(scale>0.7&&p.type!=='airport'){
+      ctx.font=`${Math.min(11,9*scale)}px -apple-system,sans-serif`;
+      ctx.fillStyle='#ccc';ctx.textAlign='center';
+      ctx.fillText(p.name.length>6?p.name.slice(0,5)+'…':p.name,x,y+r+11);
+    }
+    if(p.type==='airport'){
+      ctx.font=`bold ${Math.min(12,10*scale)}px -apple-system,sans-serif`;
+      ctx.fillStyle='#fff';ctx.textAlign='center';
+      ctx.fillText('✈ 인천공항',x,y-r-5);
+    }
   });
 }
 
-function render() {
-  markers.forEach(m => map.removeLayer(m));
-  markers = [];
-  const list = currentFilter === 'all' ? POINTS : POINTS.filter(p => p.type === currentFilter);
+function draw(){
+  if(!W)return;
+  ctx.clearRect(0,0,W,H);
+  drawBg();drawMarkers();
+}
 
-  list.forEach(p => {
-    const m = L.marker([p.lat,p.lng], { icon: mkIcon(p.color) })
-      .addTo(map)
-      .bindPopup(`<div class="popup-title">${p.icon} ${p.name}</div><div style="font-size:10px;color:#9ca3af;margin-bottom:4px;">${p.loc}</div><div class="popup-row"><span class="badge b-blue">⏱ ${p.time}</span><span class="badge b-green">💰 ${p.price}</span></div>`);
-    m.on('click', () => highlightCard(p.id));
-    markers.push(m);
+function resize(){
+  const mw=document.getElementById('mw');
+  W=cv.width=mw.clientWidth;H=cv.height=mw.clientHeight;draw();
+}
+
+function doZoom(f){scale=Math.min(5,Math.max(.3,scale*f));draw();}
+
+// 마우스
+cv.addEventListener('mousedown',e=>{dragging=true;dx=e.clientX;dy=e.clientY;});
+cv.addEventListener('mousemove',e=>{
+  if(dragging){ox+=e.clientX-dx;oy+=e.clientY-dy;dx=e.clientX;dy=e.clientY;draw();}
+  const r=cv.getBoundingClientRect();
+  const mx=e.clientX-r.left,my=e.clientY-r.top;
+  let f=null;
+  PTS.forEach(p=>{const {x,y}=ll(p.lat,p.lng);if(Math.hypot(mx-x,my-y)<14)f=p;});
+  hov=f?f.id:null;draw();showTip(f,e.clientX,e.clientY);
+});
+cv.addEventListener('mouseup',()=>dragging=false);
+cv.addEventListener('mouseleave',()=>{dragging=false;hov=null;hideTip();draw();});
+cv.addEventListener('wheel',e=>{e.preventDefault();doZoom(e.deltaY<0?1.15:.87);},{passive:false});
+
+// 터치
+let ld=0;
+cv.addEventListener('touchstart',e=>{
+  if(e.touches.length===1){dragging=true;dx=e.touches[0].clientX;dy=e.touches[0].clientY;}
+  else if(e.touches.length===2)ld=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+});
+cv.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(e.touches.length===1&&dragging){ox+=e.touches[0].clientX-dx;oy+=e.touches[0].clientY-dy;dx=e.touches[0].clientX;dy=e.touches[0].clientY;draw();}
+  else if(e.touches.length===2){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);doZoom(d/ld);ld=d;}
+},{passive:false});
+cv.addEventListener('touchend',()=>dragging=false);
+
+function showTip(p,cx,cy){
+  const tip=document.getElementById('tip');
+  if(!p||p.type==='airport'){hideTip();return;}
+  document.getElementById('tn').textContent=p.icon+' '+p.name;
+  document.getElementById('tl').textContent=p.loc;
+  document.getElementById('tt').textContent='⏱ '+p.time;
+  document.getElementById('tp').textContent='💰 '+p.price;
+  tip.style.display='block';
+  const r=document.getElementById('mw').getBoundingClientRect();
+  let tx=cx-r.left+12,ty=cy-r.top-80;
+  if(tx+165>W)tx-=175;if(ty<0)ty=10;
+  tip.style.left=tx+'px';tip.style.top=ty+'px';
+}
+function hideTip(){document.getElementById('tip').style.display='none';}
+
+function renderCards(){
+  const list=filt==='all'?PTS.filter(p=>p.type!=='airport'):PTS.filter(p=>p.type===filt);
+  document.getElementById('cards').innerHTML=list.map(p=>`
+    <div class="card" id="card-${p.id}" onclick="focusPt('${p.id}')">
+      <div class="ct">
+        <div class="ci" style="background:${p.color}22">${p.icon}</div>
+        <div><div class="cn">${p.name}</div><div class="cl">${p.loc}</div></div>
+      </div>
+      <div class="cs">
+        <div class="st"><div class="sv">${p.time}</div><div class="sl">소요</div></div>
+        <div class="st"><div class="sv" style="font-size:9px">${p.price}</div><div class="sl">요금</div></div>
+        <div class="st"><div class="sv" style="font-size:9px">${p.gap}</div><div class="sl">간격</div></div>
+      </div>
+    </div>`).join('');
+}
+
+function focusPt(id){
+  const p=PTS.find(x=>x.id===id);if(!p)return;
+  const {x,y}=ll(p.lat,p.lng);ox+=W/2-x;oy+=H/2-y;
+  hov=id;draw();hlCard(id);
+}
+
+function hlCard(id){
+  document.querySelectorAll('.card').forEach(c=>c.classList.remove('on'));
+  const c=document.getElementById('card-'+id);
+  if(c){c.classList.add('on');c.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});}
+}
+
+function setF(type,btn){
+  filt=type;
+  document.querySelectorAll('.fb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderCards();draw();
+}
+
+function applyData(data){
+  if(!data)return;
+  if(data.title)document.getElementById('ht').textContent=data.title;
+  if(data.subtitle)document.getElementById('hs').textContent=data.subtitle;
+  if(data.focus){
+    const {x,y}=ll(data.focus.lat,data.focus.lng);
+    ox+=W/2-x;oy+=H/2-y;scale=1.3;draw();
+  }
+  if(data.highlight)setTimeout(()=>hlCard(data.highlight),300);
+}
+
+try{
+  if(window.openai){applyData(window.openai.toolOutput);window.openai.onToolOutput=applyData;}
+  window.addEventListener("message",e=>{
+    if(e.data?.method==="ui/notifications/tool-result")applyData(e.data?.params?.structuredContent);
+    if(e.data?.result?.structuredContent)applyData(e.data.result.structuredContent);
   });
+}catch(e){}
 
-  document.getElementById('cards').innerHTML = list.map(p => `
-    <div class="card" id="card-${p.id}" onclick="focusPoint('${p.id}')">
-      <div class="card-top">
-        <div class="card-icon" style="background:${p.color}22">${p.icon}</div>
-        <div><div class="card-name">${p.name}</div><div class="card-loc">${p.loc}</div></div>
-      </div>
-      <div class="card-stats">
-        <div class="stat"><div class="stat-v">${p.time}</div><div class="stat-l">소요</div></div>
-        <div class="stat"><div class="stat-v" style="font-size:10px">${p.price}</div><div class="stat-l">요금</div></div>
-        <div class="stat"><div class="stat-v" style="font-size:9px">${p.gap}</div><div class="stat-l">간격</div></div>
-      </div>
-    </div>
-  `).join('');
-}
-
-function focusPoint(id) {
-  const p = POINTS.find(x => x.id === id);
-  if (p) { map.flyTo([p.lat,p.lng], 13, {duration:0.8}); highlightCard(id); }
-}
-
-function highlightCard(id) {
-  document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
-  const c = document.getElementById(`card-${id}`);
-  if (c) { c.classList.add('active'); c.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}); }
-}
-
-function setFilter(type, btn) {
-  currentFilter = type;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  render();
-}
-
-window.addEventListener('load', initMap);
+window.addEventListener('load',()=>{resize();renderCards();});
+window.addEventListener('resize',resize);
 </script>
 </body>
 </html>
