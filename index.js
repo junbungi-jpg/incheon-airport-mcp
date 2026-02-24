@@ -20,20 +20,56 @@ const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET;
 
 // ── 네이버 API 헬퍼 ───────────────────────────────────────────────────────────
 
-// 주소 → 좌표 (Geocoding)
+// 주소 → 좌표 (Geocoding) - 두 엔드포인트 + 검색 fallback
 async function geocode(query) {
-  const url = `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(query)}`;
-  const res = await fetch(url, {
-    headers: {
-      "X-NCP-APIGW-API-KEY-ID": NAVER_CLIENT_ID,
-      "X-NCP-APIGW-API-KEY":    NAVER_CLIENT_SECRET,
-    },
-  });
-  const data = await res.json();
-  if (data.addresses && data.addresses.length > 0) {
-    const a = data.addresses[0];
-    return { lat: parseFloat(a.y), lng: parseFloat(a.x), address: a.roadAddress || a.jibunAddress };
+  const ncpHeaders = {
+    "X-NCP-APIGW-API-KEY-ID": NAVER_CLIENT_ID,
+    "X-NCP-APIGW-API-KEY":    NAVER_CLIENT_SECRET,
+  };
+
+  // 1차: 최신 엔드포인트
+  const endpoints = [
+    `https://maps.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(query)}`,
+    `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(query)}`,
+  ];
+
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, { headers: ncpHeaders });
+      const data = await res.json();
+      console.log(`[Geocode] ${url.split("?")[0]} status:${res.status} count:${data.meta?.totalCount}`);
+      if (data.addresses?.length > 0) {
+        const a = data.addresses[0];
+        return { lat: parseFloat(a.y), lng: parseFloat(a.x), address: a.roadAddress || a.jibunAddress };
+      }
+    } catch (e) {
+      console.error(`[Geocode] 실패:`, e.message);
+    }
   }
+
+  // 2차: 네이버 장소 검색 fallback
+  try {
+    const searchUrl = `https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=1`;
+    const res = await fetch(searchUrl, {
+      headers: {
+        "X-Naver-Client-Id":     NAVER_CLIENT_ID,
+        "X-Naver-Client-Secret": NAVER_CLIENT_SECRET,
+      },
+    });
+    const data = await res.json();
+    console.log(`[Search] status:${res.status} items:${data.items?.length}`);
+    if (data.items?.length > 0) {
+      const item = data.items[0];
+      return {
+        lat: parseFloat(item.mapy) / 1e7,
+        lng: parseFloat(item.mapx) / 1e7,
+        address: item.address || query,
+      };
+    }
+  } catch (e) {
+    console.error("[Search fallback] 실패:", e.message);
+  }
+
   return null;
 }
 
@@ -41,24 +77,32 @@ async function geocode(query) {
 const AIRPORT_LNG = 126.4407, AIRPORT_LAT = 37.4602;
 
 async function getDirections(startLat, startLng) {
-  const url = `https://naveropenapi.apigw.ntruss.com/map-direction/v1/driving`
-    + `?start=${startLng},${startLat}&goal=${AIRPORT_LNG},${AIRPORT_LAT}&option=trafast`;
-  const res = await fetch(url, {
-    headers: {
-      "X-NCP-APIGW-API-KEY-ID": NAVER_CLIENT_ID,
-      "X-NCP-APIGW-API-KEY":    NAVER_CLIENT_SECRET,
-    },
-  });
-  const data = await res.json();
-  if (data.route) {
-    const r = data.route.trafast?.[0] || data.route.traoptimal?.[0];
-    if (r) {
-      return {
-        distance: Math.round(r.summary.distance / 1000), // km
-        duration: Math.round(r.summary.duration / 60000), // 분
-        tollFare: r.summary.tollFare || 0,
-        path: r.path, // [[lng, lat], ...]
-      };
+  const params = `?start=${startLng},${startLat}&goal=${AIRPORT_LNG},${AIRPORT_LAT}&option=trafast`;
+  const endpoints = [
+    `https://maps.apigw.ntruss.com/map-direction/v1/driving${params}`,
+    `https://naveropenapi.apigw.ntruss.com/map-direction/v1/driving${params}`,
+  ];
+  const headers = {
+    "X-NCP-APIGW-API-KEY-ID": NAVER_CLIENT_ID,
+    "X-NCP-APIGW-API-KEY":    NAVER_CLIENT_SECRET,
+  };
+
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, { headers });
+      const data = await res.json();
+      console.log(`[Directions] status:${res.status} route:`, !!data.route);
+      if (data.route) {
+        const r = data.route.trafast?.[0] || data.route.traoptimal?.[0];
+        if (r) return {
+          distance: Math.round(r.summary.distance / 1000),
+          duration: Math.round(r.summary.duration / 60000),
+          tollFare: r.summary.tollFare || 0,
+          path: r.path,
+        };
+      }
+    } catch (e) {
+      console.error(`[Directions] 실패:`, e.message);
     }
   }
   return null;
