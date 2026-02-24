@@ -4,555 +4,172 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>인천공항 교통 지도</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, sans-serif; background: #0f1117; color: #fff; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
 
-    body {
-      font-family: 'Pretendard', -apple-system, sans-serif;
-      background: #0f1117;
-      color: #fff;
-      height: 100vh;
-      overflow: hidden;
-    }
+    #header { padding: 12px 16px; background: #0f1117; border-bottom: 1px solid #1e2030; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    #header h1 { font-size: 14px; font-weight: 700; }
+    #header p { font-size: 11px; color: #6b7280; }
 
-    #app {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-
-    /* 헤더 */
-    #header {
-      padding: 14px 16px 10px;
-      background: #0f1117;
-      border-bottom: 1px solid #1e2030;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-shrink: 0;
-    }
-
-    #header .icon { font-size: 20px; }
-
-    #header h1 {
-      font-size: 15px;
-      font-weight: 700;
-      color: #fff;
-    }
-
-    #header .subtitle {
-      font-size: 11px;
-      color: #6b7280;
-      margin-top: 1px;
-    }
-
-    /* 필터 탭 */
-    #filters {
-      display: flex;
-      gap: 6px;
-      padding: 10px 16px;
-      background: #0f1117;
-      overflow-x: auto;
-      flex-shrink: 0;
-      scrollbar-width: none;
-    }
+    #filters { display: flex; gap: 6px; padding: 8px 16px; overflow-x: auto; flex-shrink: 0; scrollbar-width: none; }
     #filters::-webkit-scrollbar { display: none; }
+    .filter-btn { padding: 4px 12px; border-radius: 20px; border: 1px solid #2d3148; background: transparent; color: #9ca3af; font-size: 11px; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+    .filter-btn.active { background: #3b82f6; border-color: #3b82f6; color: #fff; font-weight: 600; }
 
-    .filter-btn {
-      padding: 5px 12px;
-      border-radius: 20px;
-      border: 1px solid #2d3148;
-      background: transparent;
-      color: #9ca3af;
-      font-size: 12px;
-      font-family: inherit;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.2s;
-    }
+    #map { flex: 1; }
 
-    .filter-btn.active {
-      background: #3b82f6;
-      border-color: #3b82f6;
-      color: #fff;
-      font-weight: 600;
-    }
-
-    /* 지도 */
-    #map {
-      flex: 1;
-      z-index: 1;
-    }
-
-    /* 하단 카드 슬라이더 */
-    #card-container {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      z-index: 1000;
-      padding: 0 16px 16px;
-    }
-
-    #cards {
-      display: flex;
-      gap: 10px;
-      overflow-x: auto;
-      scrollbar-width: none;
-      padding-bottom: 2px;
-    }
+    #card-container { position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; padding: 0 12px 12px; }
+    #cards { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
     #cards::-webkit-scrollbar { display: none; }
 
-    .transport-card {
-      flex-shrink: 0;
-      width: 220px;
-      background: rgba(15, 17, 23, 0.95);
-      backdrop-filter: blur(12px);
-      border: 1px solid #2d3148;
-      border-radius: 14px;
-      padding: 14px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
+    .card { flex-shrink: 0; width: 200px; background: rgba(15,17,23,0.96); backdrop-filter: blur(12px); border: 1px solid #2d3148; border-radius: 12px; padding: 12px; cursor: pointer; transition: all 0.2s; }
+    .card:hover, .card.active { border-color: #3b82f6; transform: translateY(-2px); }
+    .card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .card-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+    .card-name { font-size: 12px; font-weight: 700; }
+    .card-loc { font-size: 10px; color: #6b7280; }
+    .card-stats { display: flex; gap: 6px; }
+    .stat { flex: 1; background: #1a1d2e; border-radius: 6px; padding: 5px; text-align: center; }
+    .stat-v { font-size: 11px; font-weight: 700; }
+    .stat-l { font-size: 9px; color: #6b7280; margin-top: 1px; }
 
-    .transport-card:hover, .transport-card.active {
-      border-color: #3b82f6;
-      transform: translateY(-2px);
-    }
-
-    .card-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 10px;
-    }
-
-    .card-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-      flex-shrink: 0;
-    }
-
-    .card-name {
-      font-size: 13px;
-      font-weight: 700;
-      color: #fff;
-      line-height: 1.3;
-    }
-
-    .card-type {
-      font-size: 10px;
-      color: #6b7280;
-      margin-top: 1px;
-    }
-
-    .card-stats {
-      display: flex;
-      gap: 8px;
-    }
-
-    .stat {
-      flex: 1;
-      background: #1a1d2e;
-      border-radius: 8px;
-      padding: 7px 8px;
-      text-align: center;
-    }
-
-    .stat-value {
-      font-size: 13px;
-      font-weight: 700;
-      color: #fff;
-    }
-
-    .stat-label {
-      font-size: 9px;
-      color: #6b7280;
-      margin-top: 2px;
-    }
-
-    /* 마커 커스텀 */
-    .custom-marker {
-      background: #3b82f6;
-      border: 2px solid #fff;
-      border-radius: 50%;
-      width: 12px;
-      height: 12px;
-      box-shadow: 0 2px 8px rgba(59,130,246,0.6);
-    }
-
-    .marker-airport {
-      background: #ef4444;
-      width: 16px;
-      height: 16px;
-    }
-
-    /* 팝업 스타일 */
-    .leaflet-popup-content-wrapper {
-      background: #1a1d2e;
-      border: 1px solid #2d3148;
-      border-radius: 10px;
-      color: #fff;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-    }
+    .leaflet-popup-content-wrapper { background: #1a1d2e; border: 1px solid #2d3148; border-radius: 10px; color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
     .leaflet-popup-tip { background: #1a1d2e; }
-    .leaflet-popup-content { margin: 12px 14px; }
-
-    .popup-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: #fff;
-      margin-bottom: 6px;
-    }
-
-    .popup-row {
-      display: flex;
-      gap: 6px;
-      margin-top: 4px;
-    }
-
-    .popup-badge {
-      font-size: 10px;
-      padding: 2px 7px;
-      border-radius: 10px;
-      font-weight: 600;
-    }
-
-    .badge-blue { background: rgba(59,130,246,0.2); color: #60a5fa; }
-    .badge-green { background: rgba(34,197,94,0.2); color: #4ade80; }
-    .badge-yellow { background: rgba(234,179,8,0.2); color: #facc15; }
-
-    /* 로딩 */
-    #loading {
-      position: absolute;
-      inset: 0;
-      background: #0f1117;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .spinner {
-      width: 32px;
-      height: 32px;
-      border: 3px solid #2d3148;
-      border-top-color: #3b82f6;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    #loading p { font-size: 13px; color: #6b7280; }
+    .leaflet-popup-content { margin: 10px 12px; }
+    .popup-title { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+    .popup-row { display: flex; gap: 4px; margin-top: 4px; }
+    .badge { font-size: 10px; padding: 2px 6px; border-radius: 8px; font-weight: 600; }
+    .b-blue { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .b-green { background: rgba(34,197,94,0.2); color: #4ade80; }
   </style>
 </head>
 <body>
 
-<div id="loading">
-  <div class="spinner"></div>
-  <p>지도 불러오는 중...</p>
+<div id="header">
+  <span style="font-size:18px">✈️</span>
+  <div>
+    <h1 id="title">인천공항 교통 안내</h1>
+    <p id="subtitle">출발지 주변 교통편을 확인하세요</p>
+  </div>
 </div>
 
-<div id="app">
-  <div id="header">
-    <span class="icon">✈️</span>
-    <div>
-      <h1 id="header-title">인천공항 교통 안내</h1>
-      <div class="subtitle" id="header-subtitle">출발지 주변 교통편을 확인하세요</div>
-    </div>
-  </div>
+<div id="filters">
+  <button class="filter-btn active" onclick="setFilter('all',this)">전체</button>
+  <button class="filter-btn" onclick="setFilter('rail',this)">🚇 철도</button>
+  <button class="filter-btn" onclick="setFilter('bus',this)">🚌 버스</button>
+  <button class="filter-btn" onclick="setFilter('taxi',this)">🚕 택시</button>
+</div>
 
-  <div id="filters">
-    <button class="filter-btn active" onclick="filterTransport('all')">전체</button>
-    <button class="filter-btn" onclick="filterTransport('rail')">🚇 철도</button>
-    <button class="filter-btn" onclick="filterTransport('bus')">🚌 버스</button>
-    <button class="filter-btn" onclick="filterTransport('taxi')">🚕 택시</button>
-  </div>
+<div id="map"></div>
 
-  <div id="map"></div>
-
-  <div id="card-container">
-    <div id="cards"></div>
-  </div>
+<div id="card-container">
+  <div id="cards"></div>
 </div>
 
 <script>
-// ── 데이터 ──────────────────────────────────────────────────────────────────
-
-const AIRPORT = { lat: 37.4602, lng: 126.4407, name: "인천국제공항" };
-
-const TRANSPORT_POINTS = [
-  {
-    id: "arex_direct",
-    type: "rail",
-    name: "공항철도 직통",
-    icon: "🚇",
-    color: "#3b82f6",
-    lat: 37.5546, lng: 126.9706,
-    location: "서울역",
-    duration: "43분",
-    price: "11,000원",
-    interval: "30분 간격",
-    desc: "서울역 → 인천공항 직통"
-  },
-  {
-    id: "arex_regular",
-    type: "rail",
-    name: "공항철도 일반",
-    icon: "🚇",
-    color: "#60a5fa",
-    lat: 37.5546, lng: 126.9706,
-    location: "서울역",
-    duration: "66분",
-    price: "4,150원",
-    interval: "6~12분 간격",
-    desc: "서울역 → 인천공항 일반"
-  },
-  {
-    id: "bus_gangnam",
-    type: "bus",
-    name: "리무진 6103",
-    icon: "🚌",
-    color: "#22c55e",
-    lat: 37.4979, lng: 127.0276,
-    location: "강남역",
-    duration: "80~110분",
-    price: "17,000원",
-    interval: "15~20분",
-    desc: "강남역·양재역 → 인천공항"
-  },
-  {
-    id: "bus_jamsil",
-    type: "bus",
-    name: "리무진 6001",
-    icon: "🚌",
-    color: "#22c55e",
-    lat: 37.5133, lng: 127.1000,
-    location: "잠실역",
-    duration: "70~100분",
-    price: "17,000원",
-    interval: "20~30분",
-    desc: "잠실역·강변역 → 인천공항"
-  },
-  {
-    id: "bus_myungdong",
-    type: "bus",
-    name: "리무진 6020",
-    icon: "🚌",
-    color: "#22c55e",
-    lat: 37.5636, lng: 126.9869,
-    location: "명동·서울역",
-    duration: "60~90분",
-    price: "15,000원",
-    interval: "15~20분",
-    desc: "명동·서울역 → 인천공항"
-  },
-  {
-    id: "bus_sinchon",
-    type: "bus",
-    name: "리무진 6030",
-    icon: "🚌",
-    color: "#22c55e",
-    lat: 37.5552, lng: 126.9368,
-    location: "신촌·홍대",
-    duration: "50~80분",
-    price: "15,000원",
-    interval: "20분",
-    desc: "신촌·홍대 → 인천공항"
-  },
-  {
-    id: "taxi_seoul",
-    type: "taxi",
-    name: "택시",
-    icon: "🚕",
-    color: "#f59e0b",
-    lat: 37.5665, lng: 126.9780,
-    location: "서울 시내",
-    duration: "50~90분",
-    price: "60,000~90,000원",
-    interval: "24시간",
-    desc: "서울 시내 → 인천공항"
-  },
+const POINTS = [
+  { id:"arex1", type:"rail", name:"공항철도 직통", icon:"🚇", color:"#3b82f6", lat:37.5546, lng:126.9706, loc:"서울역", time:"43분", price:"11,000원", gap:"30분" },
+  { id:"arex2", type:"rail", name:"공항철도 일반", icon:"🚇", color:"#60a5fa", lat:37.5546, lng:126.9710, loc:"서울역", time:"66분", price:"4,150원", gap:"6~12분" },
+  { id:"bus1",  type:"bus",  name:"리무진 6103", icon:"🚌", color:"#22c55e", lat:37.4979, lng:127.0276, loc:"강남역", time:"80~110분", price:"17,000원", gap:"15~20분" },
+  { id:"bus2",  type:"bus",  name:"리무진 6001", icon:"🚌", color:"#22c55e", lat:37.5133, lng:127.1000, loc:"잠실역", time:"70~100분", price:"17,000원", gap:"20~30분" },
+  { id:"bus3",  type:"bus",  name:"리무진 6020", icon:"🚌", color:"#4ade80", lat:37.5636, lng:126.9869, loc:"명동", time:"60~90분", price:"15,000원", gap:"15~20분" },
+  { id:"bus4",  type:"bus",  name:"리무진 6030", icon:"🚌", color:"#4ade80", lat:37.5552, lng:126.9368, loc:"신촌·홍대", time:"50~80분", price:"15,000원", gap:"20분" },
+  { id:"taxi1", type:"taxi", name:"택시", icon:"🚕", color:"#f59e0b", lat:37.5665, lng:126.9780, loc:"서울 시내", time:"50~90분", price:"60,000~90,000원", gap:"24시간" },
 ];
-
-// ── 지도 초기화 ────────────────────────────────────────────────────────────
 
 let map, markers = [], currentFilter = "all";
 
 function initMap() {
-  map = L.map('map', {
-    center: [37.52, 126.75],
-    zoom: 11,
-    zoomControl: false,
-  });
-
-  // 다크 테마 타일
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '©OpenStreetMap ©CartoDB',
-    subdomains: 'abcd',
-    maxZoom: 19
-  }).addTo(map);
-
-  // 줌 컨트롤 우측 상단
-  L.control.zoom({ position: 'topright' }).addTo(map);
+  map = L.map('map', { center:[37.52,126.75], zoom:11, zoomControl:false });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution:'©CartoDB', subdomains:'abcd', maxZoom:19 }).addTo(map);
+  L.control.zoom({ position:'topright' }).addTo(map);
 
   // 공항 마커
-  const airportIcon = L.divIcon({
-    html: `<div style="
-      background:#ef4444;border:3px solid #fff;border-radius:50%;
-      width:20px;height:20px;box-shadow:0 2px 12px rgba(239,68,68,0.7);
-      display:flex;align-items:center;justify-content:center;
-      font-size:10px;
-    ">✈</div>`,
-    className: '',
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
-  });
+  L.marker([37.4602, 126.4407], { icon: L.divIcon({
+    html:`<div style="background:#ef4444;border:3px solid #fff;border-radius:50%;width:18px;height:18px;box-shadow:0 2px 10px rgba(239,68,68,0.8);display:flex;align-items:center;justify-content:center;font-size:9px;">✈</div>`,
+    className:'', iconSize:[18,18], iconAnchor:[9,9]
+  })}).addTo(map).bindPopup('<div class="popup-title">✈️ 인천국제공항</div><div class="popup-row"><span class="badge b-blue">제1터미널</span><span class="badge b-green">제2터미널</span></div>');
 
-  L.marker([AIRPORT.lat, AIRPORT.lng], { icon: airportIcon })
-    .addTo(map)
-    .bindPopup(`<div class="popup-title">✈️ 인천국제공항</div>
-      <div class="popup-row">
-        <span class="popup-badge badge-blue">제1터미널</span>
-        <span class="popup-badge badge-green">제2터미널</span>
-      </div>`)
-    .openPopup();
+  render();
 
-  // 교통 마커들
-  renderMarkers();
-  renderCards();
-
-  document.getElementById('loading').style.display = 'none';
+  // Apps SDK 연동
+  try {
+    if (window.openai) {
+      applyData(window.openai.toolOutput);
+      window.openai.onToolOutput = applyData;
+    }
+    // MCP Apps bridge
+    window.addEventListener("message", (e) => {
+      if (e.data?.method === "ui/notifications/tool-result") {
+        applyData(e.data?.params?.structuredContent);
+      }
+    });
+  } catch(e) {}
 }
 
-function renderMarkers() {
-  // 기존 마커 제거
+function applyData(data) {
+  if (!data) return;
+  if (data.title) document.getElementById('title').textContent = data.title;
+  if (data.subtitle) document.getElementById('subtitle').textContent = data.subtitle;
+  if (data.focus) map.flyTo([data.focus.lat, data.focus.lng], 13, { duration:0.8 });
+  if (data.highlight) highlightCard(data.highlight);
+}
+
+function mkIcon(color) {
+  return L.divIcon({
+    html:`<div style="background:${color};border:2px solid #fff;border-radius:50%;width:12px;height:12px;box-shadow:0 2px 6px ${color}99;"></div>`,
+    className:'', iconSize:[12,12], iconAnchor:[6,6]
+  });
+}
+
+function render() {
   markers.forEach(m => map.removeLayer(m));
   markers = [];
+  const list = currentFilter === 'all' ? POINTS : POINTS.filter(p => p.type === currentFilter);
 
-  const filtered = currentFilter === 'all'
-    ? TRANSPORT_POINTS
-    : TRANSPORT_POINTS.filter(p => p.type === currentFilter);
-
-  filtered.forEach(point => {
-    const icon = L.divIcon({
-      html: `<div style="
-        background:${point.color};border:2px solid #fff;border-radius:50%;
-        width:13px;height:13px;
-        box-shadow:0 2px 8px ${point.color}99;
-      "></div>`,
-      className: '',
-      iconSize: [13, 13],
-      iconAnchor: [6, 6],
-    });
-
-    const marker = L.marker([point.lat, point.lng], { icon })
+  list.forEach(p => {
+    const m = L.marker([p.lat,p.lng], { icon: mkIcon(p.color) })
       .addTo(map)
-      .bindPopup(`
-        <div class="popup-title">${point.icon} ${point.name}</div>
-        <div style="font-size:11px;color:#9ca3af;margin-bottom:6px;">${point.location}</div>
-        <div class="popup-row">
-          <span class="popup-badge badge-blue">⏱ ${point.duration}</span>
-          <span class="popup-badge badge-green">💰 ${point.price}</span>
-        </div>
-      `);
-
-    marker.on('click', () => highlightCard(point.id));
-    markers.push(marker);
+      .bindPopup(`<div class="popup-title">${p.icon} ${p.name}</div><div style="font-size:10px;color:#9ca3af;margin-bottom:4px;">${p.loc}</div><div class="popup-row"><span class="badge b-blue">⏱ ${p.time}</span><span class="badge b-green">💰 ${p.price}</span></div>`);
+    m.on('click', () => highlightCard(p.id));
+    markers.push(m);
   });
-}
 
-function renderCards() {
-  const container = document.getElementById('cards');
-  const filtered = currentFilter === 'all'
-    ? TRANSPORT_POINTS
-    : TRANSPORT_POINTS.filter(p => p.type === currentFilter);
-
-  container.innerHTML = filtered.map(point => `
-    <div class="transport-card" id="card-${point.id}" onclick="focusPoint('${point.id}')">
-      <div class="card-header">
-        <div class="card-icon" style="background:${point.color}22;">
-          ${point.icon}
-        </div>
-        <div>
-          <div class="card-name">${point.name}</div>
-          <div class="card-type">${point.location}</div>
-        </div>
+  document.getElementById('cards').innerHTML = list.map(p => `
+    <div class="card" id="card-${p.id}" onclick="focusPoint('${p.id}')">
+      <div class="card-top">
+        <div class="card-icon" style="background:${p.color}22">${p.icon}</div>
+        <div><div class="card-name">${p.name}</div><div class="card-loc">${p.loc}</div></div>
       </div>
       <div class="card-stats">
-        <div class="stat">
-          <div class="stat-value">${point.duration}</div>
-          <div class="stat-label">소요시간</div>
-        </div>
-        <div class="stat">
-          <div class="stat-value" style="font-size:11px;">${point.price}</div>
-          <div class="stat-label">요금</div>
-        </div>
-        <div class="stat">
-          <div class="stat-value" style="font-size:10px;">${point.interval}</div>
-          <div class="stat-label">간격</div>
-        </div>
+        <div class="stat"><div class="stat-v">${p.time}</div><div class="stat-l">소요</div></div>
+        <div class="stat"><div class="stat-v" style="font-size:10px">${p.price}</div><div class="stat-l">요금</div></div>
+        <div class="stat"><div class="stat-v" style="font-size:9px">${p.gap}</div><div class="stat-l">간격</div></div>
       </div>
     </div>
   `).join('');
 }
 
 function focusPoint(id) {
-  const point = TRANSPORT_POINTS.find(p => p.id === id);
-  if (!point) return;
-  map.flyTo([point.lat, point.lng], 13, { duration: 0.8 });
-  highlightCard(id);
+  const p = POINTS.find(x => x.id === id);
+  if (p) { map.flyTo([p.lat,p.lng], 13, {duration:0.8}); highlightCard(id); }
 }
 
 function highlightCard(id) {
-  document.querySelectorAll('.transport-card').forEach(c => c.classList.remove('active'));
-  const card = document.getElementById(`card-${id}`);
-  if (card) {
-    card.classList.add('active');
-    card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-  }
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+  const c = document.getElementById(`card-${id}`);
+  if (c) { c.classList.add('active'); c.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}); }
 }
 
-function filterTransport(type) {
+function setFilter(type, btn) {
   currentFilter = type;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
-  renderMarkers();
-  renderCards();
+  btn.classList.add('active');
+  render();
 }
-
-// ── Apps SDK 연동 ──────────────────────────────────────────────────────────
-
-function applyToolOutput(data) {
-  if (!data) return;
-  if (data.title) document.getElementById('header-title').textContent = data.title;
-  if (data.subtitle) document.getElementById('header-subtitle').textContent = data.subtitle;
-  if (data.focusLocation && data.focusLocation.lat) {
-    map.flyTo([data.focusLocation.lat, data.focusLocation.lng], 13, { duration: 1 });
-  }
-  if (data.highlight) highlightCard(data.highlight);
-}
-
-// Apps SDK window.openai 연동
-if (window.openai) {
-  const output = window.openai.toolOutput;
-  if (output) applyToolOutput(output);
-  window.openai.onToolOutput = applyToolOutput;
-}
-
-// ── 시작 ──────────────────────────────────────────────────────────────────
 
 window.addEventListener('load', initMap);
 </script>
