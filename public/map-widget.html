@@ -15,10 +15,7 @@
     .fb{padding:4px 12px;border-radius:20px;border:1px solid #2d3148;background:transparent;color:#9ca3af;font-size:11px;cursor:pointer;white-space:nowrap;}
     .fb.on{background:#3b82f6;border-color:#3b82f6;color:#fff;font-weight:600;}
     #mw{flex:1;position:relative;min-height:0;}
-    #cv{position:absolute;top:0;left:0;width:100%;height:100%;cursor:grab;}
-    #cv:active{cursor:grabbing;}
-    #zb{position:absolute;top:10px;right:10px;z-index:10;display:flex;flex-direction:column;gap:4px;}
-    .zbt{width:28px;height:28px;background:rgba(20,23,32,.9);border:1px solid #2d3148;border-radius:6px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+    #nmap{position:absolute;top:0;left:0;width:100%;height:100%;}
     #cw{position:absolute;bottom:0;left:0;right:0;z-index:10;padding:0 12px 12px;}
     #cards{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;}
     #cards::-webkit-scrollbar{display:none;}
@@ -32,7 +29,7 @@
     .st{flex:1;background:#1a1d2e;border-radius:6px;padding:5px;text-align:center;}
     .sv{font-size:10px;font-weight:700;}
     .sl{font-size:9px;color:#6b7280;margin-top:1px;}
-    #loading{position:absolute;inset:0;background:#0f1117;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;z-index:50;}
+    #loading{position:absolute;inset:0;background:#0f1117;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;z-index:100;}
     .spin{width:28px;height:28px;border:3px solid #2d3148;border-top-color:#3b82f6;border-radius:50%;animation:sp .8s linear infinite;}
     @keyframes sp{to{transform:rotate(360deg)}}
     #loading p{font-size:12px;color:#6b7280;}
@@ -51,214 +48,82 @@
     <button class="fb" onclick="setF('taxi',this)">🚕 택시</button>
   </div>
   <div id="mw">
-    <canvas id="cv"></canvas>
-    <div id="zb">
-      <button class="zbt" onclick="zoom(1.3)">+</button>
-      <button class="zbt" onclick="zoom(.77)">−</button>
-    </div>
+    <div id="nmap"></div>
     <div id="loading"><div class="spin"></div><p>지도 불러오는 중...</p></div>
     <div id="cw"><div id="cards"></div></div>
   </div>
 </div>
 
 <script>
-// ── 상태 ──────────────────────────────────────────────────────────────────────
 const NAVER_ID = "swz1idzhg6";
 const AIRPORT = {lat:37.4602, lng:126.4407};
-let W=800, H=500, sc=1, ox=0, oy=0;
-let drag=false, dx=0, dy=0;
-let filt='all', hov=null;
-let toolData=null;
-let mapImg=null, mapImgBounds=null;
-let pathCoords=null, transitPts=[], originPt=null;
+let nmap=null, filt='all', markers=[], polyline=null, toolData=null;
 
-// 지도 중심 (기본: 서울~인천 중간)
-let mapCenter = {lat:37.52, lng:126.75};
-let mapZoom = 10;
+// ── 네이버 지도 초기화 ────────────────────────────────────────────────────────
+function initMap() {
+  const script = document.createElement('script');
+  script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${NAVER_ID}`;
+  script.onload = () => {
+    nmap = new naver.maps.Map('nmap', {
+      center: new naver.maps.LatLng(37.52, 126.75),
+      zoom: 10,
+      mapTypeId: naver.maps.MapTypeId.NORMAL,
+    });
+    document.getElementById('loading').style.display = 'none';
 
-const cv = document.getElementById('cv');
-const ctx = cv.getContext('2d');
+    // 공항 마커
+    addMarker(AIRPORT.lat, AIRPORT.lng, '#ef4444', '✈️', '인천국제공항', true);
 
-// ── Static Map 불러오기 ────────────────────────────────────────────────────────
-async function loadStaticMap(centerLat, centerLng, zoom) {
-  return new Promise((resolve) => {
-    const w = Math.round(W), h = Math.round(H);
-    const url = `https://maps.apigw.ntruss.com/map-static/v2/raster?center=${centerLng},${centerLat}&level=${zoom}&w=${w}&h=${h}&format=png&scale=2&maptype=basic`;
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      mapImg = img;
-      mapImgBounds = {lat:centerLat, lng:centerLng, zoom, w, h};
-      resolve(img);
-    };
-    img.onerror = () => {
-      // Static Map 실패 시 fallback: 배경만
-      mapImg = null;
-      resolve(null);
-    };
-    // 서버 프록시를 통해 요청 (CORS 우회)
-    img.src = `/map-tile?center=${centerLng},${centerLat}&zoom=${zoom}&w=${w}&h=${h}`;
-  });
-}
-
-// ── 좌표 → 픽셀 변환 (메르카토르) ─────────────────────────────────────────────
-function ll2px(lat, lng) {
-  const s = W * sc / 2.2;
-  return {
-    x: (lng - mapCenter.lng) * s + W/2 + ox,
-    y: -(lat - mapCenter.lat) * s * 1.25 + H/2 + oy
+    if(toolData) applyData(toolData);
   };
+  script.onerror = (e) => {
+    console.error('Naver map load error', e);
+    document.getElementById('loading').innerHTML = '<p style="color:#ef4444;padding:20px;text-align:center">지도 로드 실패<br><small>'+location.hostname+'</small></p>';
+  };
+  document.head.appendChild(script);
 }
 
-// ── 크기 설정 ──────────────────────────────────────────────────────────────────
-function resize() {
-  const mw = document.getElementById('mw');
-  const rect = mw.getBoundingClientRect();
-  W = rect.width || 800;
-  H = rect.height || 500;
-  if(W < 10) W = 800;
-  if(H < 10) H = 500;
-  cv.width = W;
-  cv.height = H;
+// ── 마커 ──────────────────────────────────────────────────────────────────────
+function addMarker(lat, lng, color, icon, title, isAirport=false) {
+  if(!nmap) return null;
+  const size = isAirport ? 20 : 14;
+  const marker = new naver.maps.Marker({
+    position: new naver.maps.LatLng(lat, lng),
+    map: nmap,
+    icon: {
+      content: `<div style="background:${color};border:2px solid #fff;border-radius:50%;width:${size}px;height:${size}px;box-shadow:0 2px 8px ${color}99;display:flex;align-items:center;justify-content:center;font-size:${isAirport?10:0}px;">${isAirport?'✈':''}</div>`,
+      anchor: new naver.maps.Point(size/2, size/2),
+    },
+    title,
+    zIndex: isAirport ? 10 : 5,
+  });
+  markers.push(marker);
+  return marker;
 }
 
-// ── 배경 그리기 ────────────────────────────────────────────────────────────────
-function drawBg() {
-  ctx.fillStyle = '#1a1d2e';
-  ctx.fillRect(0,0,W,H);
+function clearMarkers() { markers.forEach(m=>m.setMap(null)); markers=[]; }
+function clearPolyline() { if(polyline){polyline.setMap(null);polyline=null;} }
 
-  // 격자
-  ctx.strokeStyle = '#252a3d';
-  ctx.lineWidth = 0.5;
-  const st = Math.max(30, 50*sc);
-  const sx = ((ox%st)+st)%st, sy = ((oy%st)+st)%st;
-  ctx.beginPath();
-  for(let x=sx-st; x<W+st; x+=st){ctx.moveTo(x,0);ctx.lineTo(x,H);}
-  for(let y=sy-st; y<H+st; y+=st){ctx.moveTo(0,y);ctx.lineTo(W,y);}
-  ctx.stroke();
-
-  // 한강
-  const river = [[37.525,126.78],[37.535,126.85],[37.528,126.90],[37.522,126.94],[37.518,127.00],[37.523,127.08]];
-  ctx.strokeStyle = '#1e3a5f';
-  ctx.lineWidth = Math.max(5, 12*sc);
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.beginPath();
-  river.forEach(([la,ln],i)=>{const p=ll2px(la,ln);i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);});
-  ctx.stroke();
-
-  // 주요 도로
-  const roads = [
-    [[37.32,127.05],[37.56,126.98]],
-    [[37.51,126.88],[37.51,127.10]],
-    [[37.54,126.88],[37.54,127.08]],
-    [[37.46,126.44],[37.50,126.76],[37.52,126.88]],
-    [[37.50,126.76],[37.48,126.88],[37.45,126.95]],
-  ];
-  ctx.strokeStyle = '#2d3352';
-  ctx.lineWidth = Math.max(1, 2*sc);
-  roads.forEach(r=>{
-    ctx.beginPath();
-    r.forEach(([la,ln],i)=>{const p=ll2px(la,ln);i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);});
-    ctx.stroke();
+// ── 경로 ──────────────────────────────────────────────────────────────────────
+function drawPath(pathCoords) {
+  clearPolyline();
+  if(!pathCoords||!nmap) return;
+  const coords = pathCoords.map(([lng,lat])=>new naver.maps.LatLng(lat,lng));
+  polyline = new naver.maps.Polyline({
+    map: nmap,
+    path: coords,
+    strokeColor: '#3b82f6',
+    strokeWeight: 5,
+    strokeOpacity: 0.9,
+    strokeStyle: 'solid',
   });
 }
 
-// ── 경로 그리기 ────────────────────────────────────────────────────────────────
-function drawPath() {
-  if(!pathCoords || pathCoords.length < 2) return;
-  // path: [[lng,lat],...]
-  const pts = pathCoords.map(([ln,la])=>ll2px(la,ln));
-
-  // 외곽선
-  ctx.strokeStyle = 'rgba(59,130,246,0.3)';
-  ctx.lineWidth = 7;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.beginPath();
-  pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-  ctx.stroke();
-
-  // 메인 선
-  ctx.strokeStyle = '#3b82f6';
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-  ctx.stroke();
-}
-
-// ── 마커 그리기 ────────────────────────────────────────────────────────────────
-function drawMarkers() {
-  // 공항 마커
-  const apt = ll2px(AIRPORT.lat, AIRPORT.lng);
-  drawMarker(apt.x, apt.y, '#ef4444', 12, '✈', true);
-
-  // 출발지 마커
-  if(originPt) {
-    const op = ll2px(originPt.lat, originPt.lng);
-    drawMarker(op.x, op.y, '#f97316', 10, '', false, true);
-    if(sc > 0.7) {
-      ctx.font = `bold ${Math.min(11,9*sc)}px -apple-system,sans-serif`;
-      ctx.fillStyle = '#fff';
-      ctx.textAlign = 'center';
-      ctx.fillText(originPt.name, op.x, op.y - 14);
-    }
-  }
-
-  // 교통편 마커
-  const vis = filt==='all' ? transitPts : transitPts.filter(p=>p.type===filt);
-  vis.forEach(p=>{
-    const {x,y} = ll2px(p.lat, p.lng);
-    if(x<-20||x>W+20||y<-20||y>H+20) return;
-    const isH = hov===p.id;
-    drawMarker(x, y, p.color, isH?9:7, '', isH);
-    if(sc > 0.6) {
-      ctx.font = `${Math.min(10,8*sc)}px -apple-system,sans-serif`;
-      ctx.fillStyle = 'rgba(255,255,255,0.85)';
-      ctx.textAlign = 'center';
-      const label = p.name.length > 6 ? p.name.slice(0,5)+'…' : p.name;
-      ctx.fillText(label, x, y + (isH?11:9) + 4);
-    }
-  });
-}
-
-function drawMarker(x, y, color, r, emoji, glow, isDot=false) {
-  if(glow) {
-    const g = ctx.createRadialGradient(x,y,r,x,y,r+12);
-    g.addColorStop(0, color+'55');
-    g.addColorStop(1, 'transparent');
-    ctx.beginPath();ctx.arc(x,y,r+12,0,Math.PI*2);
-    ctx.fillStyle=g;ctx.fill();
-  }
-  ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
-  ctx.fillStyle=color;ctx.fill();
-  ctx.strokeStyle='#fff';ctx.lineWidth=glow?2.5:1.5;ctx.stroke();
-  if(emoji) {
-    ctx.font=`${r}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillStyle='#fff';ctx.fillText(emoji,x,y);
-    ctx.textBaseline='alphabetic';
-  }
-}
-
-// ── 전체 렌더 ──────────────────────────────────────────────────────────────────
-function draw() {
-  if(!W||!H) return;
-  ctx.clearRect(0,0,W,H);
-  drawBg();
-  drawPath();
-  drawMarkers();
-}
-
-// ── 카드 렌더 ──────────────────────────────────────────────────────────────────
-function renderCards() {
-  const list = filt==='all' ? transitPts.filter(p=>p.type!=='airport') : transitPts.filter(p=>p.type===filt);
-  if(!list.length) {
-    // 기본 데이터
-    document.getElementById('cards').innerHTML = '';
-    return;
-  }
+// ── 카드 ──────────────────────────────────────────────────────────────────────
+function renderCards(pts) {
+  const list = filt==='all' ? pts.filter(p=>p.type!=='airport') : pts.filter(p=>p.type===filt);
   document.getElementById('cards').innerHTML = list.map(p=>`
-    <div class="card" id="c-${p.id}" onclick="focusPt('${p.id}')">
+    <div class="card" id="c-${p.id}" onclick="focusPt(${p.lat},${p.lng},'${p.id}')">
       <div class="ct">
         <div class="ci" style="background:${p.color}22">${p.icon}</div>
         <div><div class="cn">${p.name}</div><div class="cl">${p.loc}</div></div>
@@ -271,102 +136,73 @@ function renderCards() {
     </div>`).join('');
 }
 
-function focusPt(id) {
-  const p = transitPts.find(x=>x.id===id);
-  if(!p) return;
-  const {x,y} = ll2px(p.lat,p.lng);
-  ox += W/2-x; oy += H/2-y;
-  hov=id; draw(); hlCard(id);
+function focusPt(lat,lng,id) {
+  if(nmap) nmap.panTo(new naver.maps.LatLng(lat,lng));
+  hlCard(id);
 }
 
 function hlCard(id) {
   document.querySelectorAll('.card').forEach(c=>c.classList.remove('on'));
-  const c = document.getElementById('c-'+id);
+  const c=document.getElementById('c-'+id);
   if(c){c.classList.add('on');c.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});}
 }
 
-function setF(type, btn) {
+function setF(type,btn) {
   filt=type;
   document.querySelectorAll('.fb').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
-  renderCards(); draw();
+  if(toolData?.transit) renderCards(toolData.transit);
 }
-
-function zoom(f) {
-  sc = Math.min(6, Math.max(.2, sc*f));
-  draw();
-}
-
-// ── 이벤트 ────────────────────────────────────────────────────────────────────
-cv.addEventListener('mousedown', e=>{drag=true;dx=e.clientX;dy=e.clientY;});
-cv.addEventListener('mousemove', e=>{
-  if(drag){ox+=e.clientX-dx;oy+=e.clientY-dy;dx=e.clientX;dy=e.clientY;draw();}
-  const r=cv.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
-  let f=null;
-  transitPts.forEach(p=>{const q=ll2px(p.lat,p.lng);if(Math.hypot(mx-q.x,my-q.y)<14)f=p;});
-  hov=f?f.id:null; draw();
-});
-cv.addEventListener('mouseup',()=>drag=false);
-cv.addEventListener('mouseleave',()=>{drag=false;hov=null;draw();});
-cv.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY<0?1.15:.87);},{passive:false});
-
-let ld=0;
-cv.addEventListener('touchstart',e=>{
-  if(e.touches.length===1){drag=true;dx=e.touches[0].clientX;dy=e.touches[0].clientY;}
-  else if(e.touches.length===2) ld=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-});
-cv.addEventListener('touchmove',e=>{
-  e.preventDefault();
-  if(e.touches.length===1&&drag){ox+=e.touches[0].clientX-dx;oy+=e.touches[0].clientY-dy;dx=e.touches[0].clientX;dy=e.touches[0].clientY;draw();}
-  else if(e.touches.length===2){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);zoom(d/ld);ld=d;}
-},{passive:false});
-cv.addEventListener('touchend',()=>drag=false);
 
 // ── 데이터 적용 ───────────────────────────────────────────────────────────────
 function applyData(data) {
   if(!data) return;
   toolData = data;
-  document.getElementById('loading').style.display='none';
+  if(!nmap) return;
 
   if(data.title) document.getElementById('ht').textContent=data.title;
   if(data.subtitle) document.getElementById('hs').textContent=data.subtitle;
-  if(data.transit) transitPts=data.transit;
-  if(data.path) pathCoords=data.path;
-  if(data.origin) originPt=data.origin;
 
-  // 지도 중심 이동
-  if(data.focus) {
-    // 출발지와 공항 중간으로 중심 설정
-    if(data.origin) {
-      mapCenter = {
-        lat: (data.origin.lat + AIRPORT.lat) / 2,
-        lng: (data.origin.lng + AIRPORT.lng) / 2,
-      };
-      // 거리에 따라 스케일 조정
-      const dlat = Math.abs(data.origin.lat - AIRPORT.lat);
-      const dlng = Math.abs(data.origin.lng - AIRPORT.lng);
-      const dist = Math.max(dlat, dlng);
-      sc = dist < 0.3 ? 2.0 : dist < 0.6 ? 1.4 : dist < 1.0 ? 1.0 : 0.7;
-    } else {
-      mapCenter = data.focus;
-    }
-    ox=0; oy=0;
+  clearMarkers();
+  addMarker(AIRPORT.lat, AIRPORT.lng, '#ef4444', '✈️', '인천국제공항', true);
+
+  const pts = data.transit || [];
+  renderCards(pts);
+  pts.forEach(p=>addMarker(p.lat,p.lng,p.color,p.icon,p.name));
+
+  // 출발지 마커
+  if(data.origin) {
+    const om = new naver.maps.Marker({
+      position: new naver.maps.LatLng(data.origin.lat, data.origin.lng),
+      map: nmap,
+      icon: {
+        content: `<div style="background:#f97316;border:3px solid #fff;border-radius:50%;width:16px;height:16px;box-shadow:0 2px 10px rgba(249,115,22,.8);"></div>`,
+        anchor: new naver.maps.Point(8,8),
+      },
+      title: data.origin.name,
+      zIndex: 20,
+    });
+    markers.push(om);
   }
 
-  renderCards();
-  draw();
+  if(data.path) drawPath(data.path);
+
+  // 출발지~공항 bounds에 맞게 지도 조정
+  if(data.origin) {
+    const bounds = new naver.maps.LatLngBounds(
+      new naver.maps.LatLng(Math.min(data.origin.lat, AIRPORT.lat) - 0.05, Math.min(data.origin.lng, AIRPORT.lng) - 0.05),
+      new naver.maps.LatLng(Math.max(data.origin.lat, AIRPORT.lat) + 0.05, Math.max(data.origin.lng, AIRPORT.lng) + 0.05)
+    );
+    nmap.fitBounds(bounds);
+  } else if(data.focus) {
+    nmap.setCenter(new naver.maps.LatLng(data.focus.lat, data.focus.lng));
+    nmap.setZoom(12);
+  }
 
   if(data.highlight) setTimeout(()=>hlCard(data.highlight),400);
 }
 
-// ── 초기화 ────────────────────────────────────────────────────────────────────
-function init() {
-  resize();
-  document.getElementById('loading').style.display='none';
-  draw();
-}
-
-// Apps SDK 연동
+// ── Apps SDK 연동 ─────────────────────────────────────────────────────────────
 try {
   if(window.openai){applyData(window.openai.toolOutput);window.openai.onToolOutput=applyData;}
   window.addEventListener('message',e=>{
@@ -375,12 +211,7 @@ try {
   });
 } catch(e){}
 
-document.addEventListener('DOMContentLoaded',()=>{
-  init();
-  setTimeout(init,100);
-  setTimeout(init,500);
-});
-window.addEventListener('resize',()=>{resize();draw();});
+initMap();
 </script>
 </body>
 </html>
