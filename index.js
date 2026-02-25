@@ -10,8 +10,10 @@ import { z } from "zod";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const widgetHtml = readFileSync(path.join(__dirname, "public/map-widget.html"), "utf8");
 
-const CLIENT_ID     = process.env.NAVER_CLIENT_ID || "swz1idzhg6";
-const CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET || "4nszVa0v5rXNtzl9bjnWAfIXeu5xyOJrnhaW14m4";
+const CLIENT_ID     = process.env.NAVER_CLIENT_ID     || "swz1idzhg6";
+const CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET || "N4ipMFLvIRNgqTkwlcR0gLo4BmEnOgWRGloUsiB2";
+const SEARCH_ID     = process.env.NAVER_SEARCH_ID     || "wlDWMoL6EBc9DeMYteNX";
+const SEARCH_SECRET = process.env.NAVER_SEARCH_SECRET || "OwJEkheCIH";
 const AIRPORT_LAT = 37.4602, AIRPORT_LNG = 126.4407;
 
 // ── 네이버 Geocoding ──────────────────────────────────────────────────────────
@@ -41,7 +43,7 @@ async function geocode(query) {
   try {
     const res = await fetch(
       `https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=1`,
-      { headers: { "X-Naver-Client-Id": CLIENT_ID, "X-Naver-Client-Secret": CLIENT_SECRET } }
+      { headers: { "X-Naver-Client-Id": SEARCH_ID, "X-Naver-Client-Secret": SEARCH_SECRET } }
     );
     const data = await res.json();
     console.log(`[Search] status:${res.status} items:${data.items?.length ?? 0}`);
@@ -227,7 +229,7 @@ const httpServer = createServer(async (req, res) => {
     res.setHeader("Content-Type", "application/json");
     const result = { clientId: CLIENT_ID?.slice(0,4)+"****", secretLen: CLIENT_SECRET?.length || 0 };
     try {
-      const url = `https://maps.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent("서울역")}`;
+      const url = `https://maps.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent("서울특별시 중구 세종대로 지하2")}`;
       const r = await fetch(url, {
         headers: {
           "X-NCP-APIGW-API-KEY-ID": CLIENT_ID,
