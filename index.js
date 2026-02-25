@@ -229,11 +229,11 @@ const httpServer = createServer(async (req, res) => {
     res.setHeader("Content-Type", "application/json");
     const result = { clientId: CLIENT_ID?.slice(0,4)+"****", secretLen: CLIENT_SECRET?.length || 0 };
     try {
-      const url = `https://maps.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent("서울특별시 중구 세종대로 지하2")}`;
+      const url = `https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent("위례중앙역")}&display=1`;
       const r = await fetch(url, {
         headers: {
-          "X-NCP-APIGW-API-KEY-ID": CLIENT_ID,
-          "X-NCP-APIGW-API-KEY": CLIENT_SECRET,
+          "X-Naver-Client-Id": SEARCH_ID,
+          "X-Naver-Client-Secret": SEARCH_SECRET,
         }
       });
       const data = await r.json();
