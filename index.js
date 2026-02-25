@@ -10,8 +10,8 @@ import { z } from "zod";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const widgetHtml = readFileSync(path.join(__dirname, "public/map-widget.html"), "utf8");
 
-const CLIENT_ID     = process.env.NAVER_CLIENT_ID;
-const CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET;
+const CLIENT_ID     = process.env.NAVER_CLIENT_ID || "swz1idzhg6";
+const CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET || "4nszVa0v5rXNtzl9bjnWAfIXeu5xyOJrnhaW14m4";
 const AIRPORT_LAT = 37.4602, AIRPORT_LNG = 126.4407;
 
 // ── 네이버 Geocoding ──────────────────────────────────────────────────────────
