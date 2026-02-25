@@ -11,7 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const widgetHtml = readFileSync(path.join(__dirname, "public/map-widget.html"), "utf8");
 
 const CLIENT_ID     = process.env.NAVER_CLIENT_ID     || "swz1idzhg6";
-const CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET || "N4ipMFLvIRNgqTkwlcR0gLo4BmEnOgWRGloUsiB2";
+const CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET || "4nszVa0v5rXNtzl9bjnWAfIXeu5xyOJrnhaW14m4";
 const SEARCH_ID     = process.env.NAVER_SEARCH_ID     || "wlDWMoL6EBc9DeMYteNX";
 const SEARCH_SECRET = process.env.NAVER_SEARCH_SECRET || "OwJEkheCIH";
 const AIRPORT_LAT = 37.4602, AIRPORT_LNG = 126.4407;
