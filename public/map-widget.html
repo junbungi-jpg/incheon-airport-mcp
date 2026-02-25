@@ -255,8 +255,7 @@ function handleToolOutput(data) {
 
 try {
   // Client ID를 서버에서 주입받아 지도 초기화
-  const clientId = document.currentScript?.dataset?.clientId || '__NAVER_CLIENT_ID__';
-  initNaverMap(clientId);
+  initNaverMap('swz1idzhg6');
 
   if (window.openai) {
     handleToolOutput(window.openai.toolOutput);
