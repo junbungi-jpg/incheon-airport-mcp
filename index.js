@@ -222,6 +222,32 @@ const httpServer = createServer(async (req, res) => {
     return;
   }
 
+  // 네이버 API 직접 테스트
+  if (req.url === "/test-naver") {
+    res.setHeader("Content-Type", "application/json");
+    const result = { clientId: CLIENT_ID?.slice(0,4)+"****", secretLen: CLIENT_SECRET?.length || 0 };
+    try {
+      const url = `https://maps.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent("서울역")}`;
+      const r = await fetch(url, {
+        headers: {
+          "X-NCP-APIGW-API-KEY-ID": CLIENT_ID,
+          "X-NCP-APIGW-API-KEY": CLIENT_SECRET,
+        }
+      });
+      const data = await r.json();
+      result.status = r.status;
+      result.totalCount = data.meta?.totalCount;
+      result.error = data.error || data.errorMessage || null;
+      result.raw = JSON.stringify(data).slice(0, 300);
+    } catch(e) {
+      result.fetchError = e.message;
+      result.cause = e.cause?.message;
+    }
+    res.writeHead(200);
+    res.end(JSON.stringify(result, null, 2));
+    return;
+  }
+
   if (req.url === "/health") {
     const naverKeys = Object.keys(process.env).filter(k => k.includes("NAVER"));
     res.setHeader("Content-Type", "application/json");
